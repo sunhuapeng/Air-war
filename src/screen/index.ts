@@ -1,11 +1,11 @@
-const { TWEEN,w } = require('../utils/import')
+const { TWEEN, w } = require('../utils/import')
 const S = require("../ts/createScene"); // 引入场景模块
 const roles = require("../ts/createRoles") // 引入角色创建模块
 const getRandomNumber = require('../utils/random') // 引入随机数方法
 const s = new S(); // 初始化场景
 (window as any).s = s
 const steep = 10 // 主角与敌人的移动跨度
-const createEnemyTime = 1000 // 创建敌人的时间间隔
+let createEnemyTime = 1000 // 创建敌人的时间间隔
 // 主角实例
 const handleLead = new roles.lead()
 const lead = handleLead.create() // 创建一个主角
@@ -37,7 +37,7 @@ function createEnemy() {
 }
 createEnemy()
 // 创建一个interval 在角色判定死亡销毁  
-const createEnemyInterval = setInterval(createEnemy, createEnemyTime)
+let createEnemyInterval = setInterval(createEnemy, createEnemyTime)
 
 // 移动主角
 function moveLead(e: KeyboardEvent) {
@@ -53,6 +53,42 @@ function moveLead(e: KeyboardEvent) {
 
 // 监听键盘 移动主角
 window.addEventListener('keydown', moveLead)
+
+// 获取按钮dom
+const highSpeed = document.querySelector('#high-speed') // 高速发射按钮
+
+const trackBullet = document.querySelector('#track-bullet') // 高速发射按钮
+const moreEnemy = document.querySelector('#more-enemy') // 高速发射按钮
+
+let highspeedFlag = false
+if (highSpeed) {
+    highSpeed.addEventListener('click', () => {
+        if (!highspeedFlag) {
+            handleLead.speetUp()
+            highspeedFlag = false
+        }
+    })
+}
+let trackBulletFlag = false
+if (trackBullet) {
+    trackBullet.addEventListener('click', () => {
+        if (!trackBulletFlag) {
+            handleLead.trackBullet()
+            trackBulletFlag = false
+        }
+    })
+}
+let moreEnemyFlag = false
+if (moreEnemy) {
+    moreEnemy.addEventListener('click', () => {
+        if (!moreEnemyFlag) {
+            clearInterval(createEnemyInterval)
+            createEnemyTime = 500
+            createEnemyInterval = setInterval(createEnemy, createEnemyTime)
+            moreEnemyFlag = false
+        }
+    })
+}
 
 
 
