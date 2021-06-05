@@ -59,6 +59,7 @@ const highSpeed = document.querySelector('#high-speed') // 高速发射按钮
 
 const trackBullet = document.querySelector('#track-bullet') // 高速发射按钮
 const moreEnemy = document.querySelector('#more-enemy') // 高速发射按钮
+const shrapnel = document.querySelector('#shrapnel') // 高速发射按钮
 
 let highspeedFlag = false
 if (highSpeed) {
@@ -86,6 +87,15 @@ if (moreEnemy) {
             createEnemyTime = 500
             createEnemyInterval = setInterval(createEnemy, createEnemyTime)
             moreEnemyFlag = false
+        }
+    })
+}
+let shrapnelFlag = false
+if (shrapnel) {
+    shrapnel.addEventListener('click', () => {
+        if (!shrapnelFlag) {
+            handleLead.shrapnelBullet()
+            shrapnelFlag = false
         }
     })
 }

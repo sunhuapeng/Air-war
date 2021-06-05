@@ -1,11 +1,10 @@
-
-
 class PublicRules {
     w: number // 角色的宽度
     h: number // 角色的高度
     cone: THREE.Mesh // 创建的角色
     tween = null // 创建补间动画
     track: boolean = false // 是否为追踪蛋
+    shrapnel: boolean = false // 是否为霰弹
     /**
      * 
      * @param w 角色的宽度
@@ -24,7 +23,7 @@ class PublicRules {
      */
 
     create(): THREE.Mesh {
-        const geometry = new THREE.ConeGeometry(this.w, this.h, 4);
+        const geometry = new THREE.CylinderGeometry(0,this.w, this.h, 4);
         const material = new THREE.MeshNormalMaterial();
         const cone = new THREE.Mesh(geometry, material);
         this.cone = cone
@@ -44,9 +43,21 @@ class PublicRules {
     move(steep: number) {
         const p = this.cone.position
         if (this.cone.name === 'lead') {
-            const end = p.clone().setX(p.x + steep)
-            // 定义动画。用于取消角色运动
-            this.tween = run(p, end, 100) // 主角运动
+
+            const s = (window as any).s
+
+            // 判定主角移动位置  超出 范围 不执行移动动画
+            if (p.x < s.maxX - steep && p.x > s.minX - steep) {
+
+                if (p.x <= s.minX + steep) p.x = s.minX + steep
+
+                if (p.x >= s.maxX + steep) p.x = s.maxX + steep
+
+                const end = p.clone().setX(p.x + steep)
+
+                // 定义动画。用于取消角色运动
+                this.tween = run(p, end, 100) // 主角运动
+            }
         } else if (this.cone.name === 'enemy') {
             const end = p.clone().setY(0)
             this.tween = run(p, end, 10000, undefined, removeObject.bind(this, this.cone)) // 敌人运动
@@ -61,10 +72,15 @@ class PublicRules {
      */
     createBullet(position: THREE.Vector3): THREE.Mesh {
         const geometry = new THREE.SphereGeometry(2, 32, 32);
+
         const material = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
         const bullet = new THREE.Mesh(geometry, material);
+
         bullet.position.copy(position.clone())
+
         bullet['box'] = new THREE.Box3() as THREE.Box3 // 创建用于检测角色之间是否有相交点的包围盒
+
         return bullet
     }
 
@@ -76,23 +92,45 @@ class PublicRules {
      * @returns           option {isIn: boolean, mesh: 有交集的几何体}
      */
     testing(position: THREE.Vector3, group: THREE.Group): { isIn: boolean, mesh: THREE.Mesh } {
+
         let isIn: boolean = false // 如果有交集 返回true
+
         let mesh = null// 有交集的几何体
+
         for (let i = 0; i < group.children.length; i++) {
+
             const child = group.children[i]
+
             if (child instanceof THREE.Mesh) {
+
                 child['box'].expandByObject(child) // 将包围盒设置为被检测主体
+
                 // 检测主体是否经过
                 const is = child['box'].containsPoint(position)
+
                 if (is) {
+
                     isIn = is
+
                     mesh = child
+
                     break
                 }
             }
 
         }
         return { isIn, mesh }
+    }
+    // 计算圆弧上的点
+    computeArc(x: number, y: number): THREE.Vector3[] {
+        var arc = new THREE.ArcCurve(x, y, 800, 0, -Math.PI, false);
+        var points = arc.getPoints(60);//分段数60，返回61个顶
+        let vArr = []
+        points.forEach((v: THREE.Vector2) => {
+            vArr.push(new THREE.Vector3(v.x, v.y, 0))
+        })
+        return vArr
+
     }
 }
 
@@ -164,7 +202,6 @@ module.exports = {
 
     lead: class Lead extends PublicRules {
 
-
         bulletRunTime: number = 2000
 
         launchTime: number = 500 // 子弹创建时间间隔
@@ -179,23 +216,28 @@ module.exports = {
 
         }
         // 主角发射子弹   
-        /**
-         * 
-         * @param bulletRunTime 子弹运行时间
-         */
         launch() {
             // 创建子弹
             this.createInterval()
         }
         // 高速发射
         speetUp() {
-            this.launchTime = 50
+            this.changeSpeet(50)
+        }
+
+        // 改变发射子弹速度
+        changeSpeet(speet: number){
+            this.launchTime = speet
             if (this.launchInterval) clearInterval(this.launchInterval)
             this.createInterval()
         }
         // 追踪蛋
         trackBullet() {
             this.track = true
+        }
+        // 霰弹突突突
+        shrapnelBullet() {
+            this.shrapnel = true
         }
         // 寻找最近的敌人
         findNearestEnemy(group: THREE.Group): THREE.Vector3 {
@@ -204,11 +246,9 @@ module.exports = {
 
             // 按理说 第一个就是最近的
             if (group.children[0]) { // 判断是否有最近的，高速发射的情况下 会出现没有敌人的情况
-
-                group.children[0].getWorldPosition(p)
-
+                p.copy(group.children[0].position)
             }
-
+            // p.sub(this.cone.position.clone())
             /**
              // 这个方法是通过循环找到最近的敌人
              let minl = Number.MAX_VALUE
@@ -226,7 +266,24 @@ module.exports = {
              enemy.getWorldPosition(p)
              */
 
-            p.setLength(1000) // 延长一段距离 省的够不到敌人
+            //  解直线方程，让终点值设置到从主角到敌人延长线的位置  
+            //  避免子弹在敌人运动的时候够不着敌人
+            let c = this.cone.position
+            let x1 = c.x
+            let y1 = c.y
+            let x2 = p.x
+            let y2 = p.y
+
+            let A = y2 - y1
+            let B = x1 - x2
+            let C = x2 * y1 - x1 * y2
+
+            let Y = p.clone().y + 200
+            // A*X+B*Y+C=0
+            let X = (0 - B * Y - C) / A
+
+            p.x = X
+            p.y = Y
             return p
         }
         // 创建interval
@@ -254,8 +311,29 @@ module.exports = {
                     const enemyGroup = s.scene.getObjectByName('enemyGroup')
 
                     end = this.findNearestEnemy(enemyGroup) // 获取到最近的敌人的坐标
+
                 }
-                const tween = run(bp, end, this.bulletRunTime, this.testing, removeObject.bind(this, bullet)) // 子弹开始运动
+
+                if (this.shrapnel) {
+                    this.track = false // 如果是霰弹，取消追踪蛋buff 
+                    this.launchTime = 500
+                    this.changeSpeet(this.launchTime)
+                    // 获取圆弧上的点集合
+                    const vs = this.computeArc(this.cone.position.x, this.cone.position.y) as THREE.Vector3[]
+                    // bulletGroup.children = []
+                    for (let i = 0; i < vs.length; i++) {
+                        const v = vs[i] // 获取每一个点
+                        // console.log(v)
+                        const newB = bullet.clone()
+                        bulletGroup.add(newB)
+                        const nbp = newB.position
+                        const tween = run(nbp, v, this.bulletRunTime, this.testing, removeObject.bind(this, bullet)) // 子弹开始运动
+
+                    }
+                } else {
+                    const tween = run(bp, end, this.bulletRunTime, this.testing, removeObject.bind(this, bullet)) // 子弹开始运动
+                }
+
 
             }, this.launchTime)
         }
