@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
     "module": "es6", // 指的是用的es module的引入方式
-      "target": "es5",
-      "sourceMap": true,
-      "allowJs": true
+    "target": "es5",
+    "sourceMap": true,
+    "allowJs": true,
+    "moduleResolution": "Node"
   },
   "exclude": [
-      "node_modules/*",
+    "node_modules/*",
   ]
 }

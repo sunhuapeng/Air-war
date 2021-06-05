@@ -16,6 +16,7 @@
     "@markusende/heatmap.js": "^2.0.6",
     "@tweenjs/tween.js": "^17.4.0",
     "async": "^2.6.2",
+    "expose-loader": "^3.0.0",
     "style-resources-loader": "^1.3.3",
     "three": "^0.129.0"
   },
@@ -25,6 +26,8 @@
     "@babel/plugin-proposal-decorators": "^7.4.4",
     "@babel/plugin-transform-runtime": "^7.7.6",
     "@babel/preset-env": "^7.4.4",
+    "@types/jquery": "^3.5.5",
+    "@types/three": "^0.129.1",
     "babel-loader": "^8.0.5",
     "babel-polyfill": "^6.26.0",
     "clean-webpack-plugin": "^3.0.0",

@@ -23,4 +23,7 @@ module.exports = [
     chunks: ["three"],
     template: "./src/html/index.html",
   }),
+  new webpack.ProvidePlugin({
+    'THREE': 'three', // 将three设为公共
+  })
 ];
