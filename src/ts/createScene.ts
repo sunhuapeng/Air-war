@@ -1,4 +1,4 @@
-const O = require('three/examples/jsm/controls/OrbitControls')
+const {OrbitControls} = require('three/examples/jsm/controls/OrbitControls')
 
 module.exports = class S {
     scene: THREE.Scene = new THREE.Scene()
@@ -10,11 +10,16 @@ module.exports = class S {
     frustumSize: number = 2000 // 远端面
     controls: any
     cameraH: number = 300
+    i = 0
+    y = 600  // 敌人初始y轴位置
+    maxX = 150
+    minX = -150
     constructor() {
+        console.log(TWEEN)
         this.init()
     }
     init(): void {
-        // console.log(TWEEN)
+        
         this.create()
     }
     create(): void {
@@ -54,9 +59,6 @@ module.exports = class S {
 
         this.dom.appendChild(this.renderer.domElement);
 
-        if (this.controls) {
-            this.controls.update()
-        }
     }
 
     // 初始化相机
@@ -71,7 +73,7 @@ module.exports = class S {
 
     // 初始化控制器
     initControls(): void {
-        this.controls = new O.OrbitControls(
+        this.controls = new OrbitControls(
             this.camera,
             this.renderer.domElement
         );
@@ -80,18 +82,7 @@ module.exports = class S {
     // 渲染动画
     animate(): void {
         requestAnimationFrame(this.animate.bind(this));  // requestAnimationFrame方法接受的是一个方法，在内部this指针改变了，所以要将this指针指向当前实例
-        // TWEEN.update()
-        // const enemyGroup = this.scene.getObjectByName('enemyGroup') // 通过名字查找敌人的组
-        // const lead = this.scene.getObjectByName('lead') // 通过名字查找主角
-        // if(enemyGroup&&enemyGroup.children.length!==0) {
-        //     for(let i=0; i<enemyGroup.children.length; i++) {
-        //         const e = enemyGroup.children[i] as THREE.Mesh
-        //         if(e.isMesh && lead) {
-        //             const lP = lead.position
-        //             e.lookAt(0,0,0)
-        //         }
-        //     }
-        // }
+        TWEEN.update()
         this.renderer.render(this.scene, this.camera);
     }
 }
