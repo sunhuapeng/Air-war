@@ -1,3 +1,4 @@
+let launchInterval = null // 创建子弹的循环  判定游戏结束后要清掉
 class PublicRules {
     w: number // 角色的宽度
     h: number // 角色的高度
@@ -22,10 +23,11 @@ class PublicRules {
      * @returns 返回角色几何体实例
      */
 
-    create(): THREE.Mesh {
-        const geometry = new THREE.CylinderGeometry(0,this.w, this.h, 4);
+    create(name?: string): THREE.Mesh {
+        const geometry = new THREE.CylinderGeometry(0, this.w, this.h, 4);
         const material = new THREE.MeshNormalMaterial();
         const cone = new THREE.Mesh(geometry, material);
+        cone.name = name
         this.cone = cone
         /**
          * todo 没找到怎么向一个已有的数据格式添加新的属性，用过interface 加extends 不好使
@@ -59,7 +61,7 @@ class PublicRules {
                 this.tween = run(p, end, 100) // 主角运动
             }
         } else if (this.cone.name === 'enemy') {
-            const end = p.clone().setY(0)
+            const end = p.clone().setY(s.cordonY)
             this.tween = run(p, end, 10000, undefined, removeObject.bind(this, this.cone)) // 敌人运动
         }
     }
@@ -123,6 +125,7 @@ class PublicRules {
     }
     // 计算圆弧上的点
     computeArc(x: number, y: number): THREE.Vector3[] {
+        // x起点，y起点，半径，圆弧起点  圆弧终点，是否逆时针角度
         var arc = new THREE.ArcCurve(x, y, 800, 0, -Math.PI, false);
         var points = arc.getPoints(60);//分段数60，返回61个顶
         let vArr = []
@@ -159,7 +162,7 @@ function run(start: THREE.Vector3, end: THREE.Vector3, time: number, updateCb?: 
             const { isIn, mesh } = updateCb(v3, enemyGroup)
 
             if (isIn) {
-
+                mesh['die'] = true
                 removeObject(mesh) // 删除敌人
 
                 endCb(mesh) // 删除子弹 之前this重新绑定过，传来的参数就是子弹实例
@@ -173,7 +176,6 @@ function run(start: THREE.Vector3, end: THREE.Vector3, time: number, updateCb?: 
     if (endCb) {
 
         tween.onComplete((object: THREE.Object3D) => {
-
             endCb(object)
 
             tween.stop() // 运动结束，取消动画 可用TWEEN.getAll()查看
@@ -190,11 +192,34 @@ function run(start: THREE.Vector3, end: THREE.Vector3, time: number, updateCb?: 
  * 
  * @param object 被删除的项
  */
-function removeObject(object: THREE.Object3D) {
 
+function removeObject(object: THREE.Object3D) {
+    const s = (window as any).s
     if (object.parent) {
+        // 判断运动结束的敌人
+        if (object.name === 'enemy' && !object['die']) {
+            gameOver()
+        }
 
         object.parent.remove(object) // 通过元素的父元素删除元素
+
+    }
+}
+
+// 游戏结束
+function gameOver() {
+
+    TWEEN.removeAll() // 暂停所有补间动画
+
+    clearInterval(s.createEnemyInterval) // 清除创建敌人的interval
+
+    clearInterval(launchInterval) // 清除创建子弹发射的intaval
+
+    const gameOver: HTMLDivElement = document.querySelector('#game-over') // 获取游戏结束dom
+    
+    if (gameOver) {
+
+        gameOver.style.display = 'block' // 显示游戏结束dom
 
     }
 }
@@ -205,8 +230,6 @@ module.exports = {
         bulletRunTime: number = 2000
 
         launchTime: number = 500 // 子弹创建时间间隔
-
-        launchInterval = null // 创建子弹的循环  判定游戏结束后要清掉
 
         constructor() {
 
@@ -226,9 +249,11 @@ module.exports = {
         }
 
         // 改变发射子弹速度
-        changeSpeet(speet: number){
+        changeSpeet(speet: number) {
             this.launchTime = speet
-            if (this.launchInterval) clearInterval(this.launchInterval)
+
+            if (launchInterval) clearInterval(launchInterval)
+
             this.createInterval()
         }
         // 追踪蛋
@@ -239,14 +264,22 @@ module.exports = {
         shrapnelBullet() {
             this.shrapnel = true
         }
+        // 困难模式
+        difficultyMode() {
+            const s = (window as any).s
+            s.cordonY = s.cordonY + s.y / 2
+            s.moveLine(s.cordonY)
+        }
         // 寻找最近的敌人
         findNearestEnemy(group: THREE.Group): THREE.Vector3 {
-            // console.log(this.cone)
+
             const p = new THREE.Vector3()
 
             // 按理说 第一个就是最近的
             if (group.children[0]) { // 判断是否有最近的，高速发射的情况下 会出现没有敌人的情况
+
                 p.copy(group.children[0].position)
+                
             }
             // p.sub(this.cone.position.clone())
             /**
@@ -289,9 +322,9 @@ module.exports = {
         // 创建interval
         createInterval() {
 
-            this.launchInterval = setInterval(() => {
+            const s = (window as any).s
+            launchInterval = setInterval(() => {
 
-                const s = (window as any).s
 
                 // 创建一发子弹
                 const bullet = this.createBullet(this.cone.position.clone());
@@ -313,21 +346,25 @@ module.exports = {
                     end = this.findNearestEnemy(enemyGroup) // 获取到最近的敌人的坐标
 
                 }
-
+                // 如果是霰弹
                 if (this.shrapnel) {
                     this.track = false // 如果是霰弹，取消追踪蛋buff 
                     this.launchTime = 500
                     this.changeSpeet(this.launchTime)
                     // 获取圆弧上的点集合
                     const vs = this.computeArc(this.cone.position.x, this.cone.position.y) as THREE.Vector3[]
-                    // bulletGroup.children = []
+
                     for (let i = 0; i < vs.length; i++) {
+
                         const v = vs[i] // 获取每一个点
-                        // console.log(v)
-                        const newB = bullet.clone()
-                        bulletGroup.add(newB)
-                        const nbp = newB.position
-                        const tween = run(nbp, v, this.bulletRunTime, this.testing, removeObject.bind(this, bullet)) // 子弹开始运动
+
+                        const newB = bullet.clone() // 新建一个子弹的副本
+
+                        bulletGroup.add(newB)  // 将子弹添加到子弹组
+
+                        const nbp = newB.position // 将子弹位置设置为起点  圆弧某一点设为终点
+
+                        const tween = run(nbp, v, this.bulletRunTime, this.testing, removeObject.bind(this, newB)) // 子弹开始运动
 
                     }
                 } else {

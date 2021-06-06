@@ -27,7 +27,7 @@ s.scene.add(bulletGroup)
 function createEnemy() {
     // 敌人实例
     const handleEnemy = new roles.enemy()
-    const enemy = handleEnemy.create()
+    const enemy = handleEnemy.create('enemy')
     const x = getRandomNumber(s.minX, s.maxX)
     enemy.position.set(x, s.y, 0)
     enemy.rotation.x = Math.PI
@@ -37,7 +37,7 @@ function createEnemy() {
 }
 createEnemy()
 // 创建一个interval 在角色判定死亡销毁  
-let createEnemyInterval = setInterval(createEnemy, createEnemyTime)
+s.createEnemyInterval = setInterval(createEnemy, createEnemyTime)
 
 // 移动主角
 function moveLead(e: KeyboardEvent) {
@@ -58,8 +58,9 @@ window.addEventListener('keydown', moveLead)
 const highSpeed = document.querySelector('#high-speed') // 高速发射按钮
 
 const trackBullet = document.querySelector('#track-bullet') // 高速发射按钮
-const moreEnemy = document.querySelector('#more-enemy') // 高速发射按钮
-const shrapnel = document.querySelector('#shrapnel') // 高速发射按钮
+const moreEnemy = document.querySelector('#more-enemy') // 很多敌人
+const shrapnel = document.querySelector('#shrapnel') // 霰弹
+const difficulty = document.querySelector('#difficulty') // 增加难度
 
 let highspeedFlag = false
 if (highSpeed) {
@@ -83,9 +84,9 @@ let moreEnemyFlag = false
 if (moreEnemy) {
     moreEnemy.addEventListener('click', () => {
         if (!moreEnemyFlag) {
-            clearInterval(createEnemyInterval)
-            createEnemyTime = 500
-            createEnemyInterval = setInterval(createEnemy, createEnemyTime)
+            clearInterval(s.createEnemyInterval)
+            createEnemyTime = 100
+            s.createEnemyInterval = setInterval(createEnemy, createEnemyTime)
             moreEnemyFlag = false
         }
     })
@@ -97,6 +98,12 @@ if (shrapnel) {
             handleLead.shrapnelBullet()
             shrapnelFlag = false
         }
+    })
+}
+
+if (difficulty) {
+    difficulty.addEventListener('click', () => {
+        handleLead.difficultyMode()
     })
 }
 
